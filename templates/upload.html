@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Files - AI Study Tutor{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>📤 Upload Study Materials</h1>
+    <p>Upload your PDF files to train the AI model</p>
+</div>
+
+<div class="upload-section">
+    <div class="upload-card">
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📄</div>
+            <h3>Drag & Drop PDF Files Here</h3>
+            <p>or</p>
+            <label for="fileInput" class="btn btn-secondary">Browse Files</label>
+            <input type="file" id="fileInput" name="files[]" accept=".pdf" multiple style="display: none;">
+            <p class="upload-hint">Only PDF files are supported</p>
+        </div>
+        
+        <div id="fileList" class="file-list"></div>
+        
+        <div class="upload-actions">
+            <button id="uploadBtn" class="btn btn-primary" disabled>Upload Files</button>
+            <button id="trainBtn" class="btn btn-success" disabled>Train Model</button>
+        </div>
+        
+        <div id="uploadStatus" class="status-message"></div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const fileList = document.getElementById('fileList');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const trainBtn = document.getElementById('trainBtn');
+    const uploadStatus = document.getElementById('uploadStatus');
+    
+    let selectedFiles = [];
+    
+    // Drag and drop handlers
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('drag-over');
+    });
+    
+    uploadArea.addEventListener('dragleave', () => {
+        uploadArea.classList.remove('drag-over');
+    });
+    
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('drag-over');
+        handleFiles(e.dataTransfer.files);
+    });
+    
+    fileInput.addEventListener('change', (e) => {
+        handleFiles(e.target.files);
+    });
+    
+    function handleFiles(files) {
+        selectedFiles = Array.from(files).filter(f => f.name.endsWith('.pdf'));
+        displayFiles();
+        uploadBtn.disabled = selectedFiles.length === 0;
+    }
+    
+    function displayFiles() {
+        fileList.innerHTML = '';
+        selectedFiles.forEach((file, index) => {
+            const fileItem = document.createElement('div');
+            fileItem.className = 'file-item';
+            fileItem.innerHTML = `
+                <span>📄 ${file.name} (${(file.size / 1024).toFixed(2)} KB)</span>
+                <button onclick="removeFile(${index})" class="btn-remove">✕</button>
+            `;
+            fileList.appendChild(fileItem);
+        });
+    }
+    
+    function removeFile(index) {
+        selectedFiles.splice(index, 1);
+        displayFiles();
+        uploadBtn.disabled = selectedFiles.length === 0;
+    }
+    
+    uploadBtn.addEventListener('click', async () => {
+        if (selectedFiles.length === 0) return;
+        
+        const formData = new FormData();
+        selectedFiles.forEach(file => {
+            formData.append('files[]', file);
+        });
+        
+        uploadBtn.disabled = true;
+        uploadStatus.innerHTML = '<div class="loading">Uploading files...</div>';
+        
+        try {
+            const response = await fetch('/upload', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                uploadStatus.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
+                trainBtn.disabled = false;
+            } else {
+                uploadStatus.innerHTML = `<div class="alert alert-error">${result.message}</div>`;
+                uploadBtn.disabled = false;
+            }
+        } catch (error) {
+            uploadStatus.innerHTML = `<div class="alert alert-error">Upload failed: ${error.message}</div>`;
+            uploadBtn.disabled = false;
+        }
+    });
+    
+    trainBtn.addEventListener('click', async () => {
+        trainBtn.disabled = true;
+        uploadStatus.innerHTML = '<div class="loading">Training model... This may take a few minutes.</div>';
+        
+        try {
+            const response = await fetch('/train', {
+                method: 'POST'
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                uploadStatus.innerHTML = `
+                    <div class="alert alert-success">
+                        ${result.message}<br>
+                        <strong>Stats:</strong><br>
+                        Documents: ${result.stats.num_documents}<br>
+                        Chunks: ${result.stats.num_chunks}<br>
+                        Avg Length: ${result.stats.avg_chunk_length.toFixed(2)}
+                    </div>
+                `;
+                setTimeout(() => {
+                    window.location.href = '/dashboard';
+                }, 2000);
+            } else {
+                uploadStatus.innerHTML = `<div class="alert alert-error">${result.message}</div>`;
+                trainBtn.disabled = false;
+            }
+        } catch (error) {
+            uploadStatus.innerHTML = `<div class="alert alert-error">Training failed: ${error.message}</div>`;
+            trainBtn.disabled = false;
+        }
+    });
+</script>
+{% endblock %}

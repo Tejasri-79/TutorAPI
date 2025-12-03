@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - AI Study Tutor{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <h1>Welcome, {{ username }}! 👋</h1>
+    <p class="subtitle">Your AI-powered study assistant</p>
+    
+    {% if is_trained %}
+    <div class="alert alert-success">
+        ✅ Model is trained and ready to use!
+    </div>
+    {% else %}
+    <div class="alert alert-warning">
+        ⚠️ Please upload PDF files and train the model to get started.
+    </div>
+    {% endif %}
+    
+    <div class="card-grid">
+        <div class="card">
+            <div class="card-icon">📤</div>
+            <h3>Upload Files</h3>
+            <p>Upload your study materials (PDF files)</p>
+            <a href="{{ url_for('upload') }}" class="btn btn-primary">Upload Now</a>
+        </div>
+        
+        <div class="card {% if not is_trained %}card-disabled{% endif %}">
+            <div class="card-icon">💬</div>
+            <h3>Ask Questions</h3>
+            <p>Get instant answers from your materials</p>
+            <a href="{{ url_for('query') }}" class="btn btn-primary {% if not is_trained %}disabled{% endif %}">Start Asking</a>
+        </div>
+        
+        <div class="card {% if not is_trained %}card-disabled{% endif %}">
+            <div class="card-icon">📊</div>
+            <h3>View Analytics</h3>
+            <p>Explore insights and visualizations</p>
+            <a href="{{ url_for('analytics') }}" class="btn btn-primary {% if not is_trained %}disabled{% endif %}">View Analytics</a>
+        </div>
+        
+        <div class="card {% if not is_trained %}card-disabled{% endif %}">
+            <div class="card-icon">📝</div>
+            <h3>Generate Quiz</h3>
+            <p>Create practice questions automatically</p>
+            <a href="{{ url_for('quiz') }}" class="btn btn-primary {% if not is_trained %}disabled{% endif %}">Generate Quiz</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Generate Quiz - AI Study Tutor{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>📝 Generate Quiz</h1>
+    <p>Automatically create practice questions from your study materials</p>
+</div>
+
+<div class="quiz-section">
+    <div class="quiz-config">
+        <h2>Quiz Configuration</h2>
+        <form id="quizForm">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="numChunks">Number of Topics</label>
+                    <input type="number" id="numChunks" name="num_chunks" value="3" min="1" max="10">
+                </div>
+                
+                <div class="form-group">
+                    <label for="questionsPerChunk">Questions per Topic</label>
+                    <input type="number" id="questionsPerChunk" name="questions_per_chunk" value="3" min="1" max="5">
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Generate Quiz</button>
+        </form>
+        
+        <div id="quizStatus" class="status-message"></div>
+    </div>
+    
+    <div id="quizResults" class="quiz-results" style="display: none;">
+        <div class="quiz-header">
+            <h2>Generated Quiz</h2>
+            <a href="{{ url_for('download_quiz') }}" class="btn btn-secondary">Download CSV</a>
+        </div>
+        
+        <div id="quizContent"></div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const quizForm = document.getElementById('quizForm');
+    const quizStatus = document.getElementById('quizStatus');
+    const quizResults = document.getElementById('quizResults');
+    const quizContent = document.getElementById('quizContent');
+    
+    quizForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const formData = new FormData(quizForm);
+        
+        quizStatus.innerHTML = '<div class="loading">Generating quiz... This may take a few minutes.</div>';
+        quizResults.style.display = 'none';
+        
+        try {
+            const response = await fetch('/quiz', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                quizStatus.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
+                displayQuiz(result.quiz);
+            } else {
+                quizStatus.innerHTML = `<div class="alert alert-error">${result.message}</div>`;
+            }
+        } catch (error) {
+            quizStatus.innerHTML = `<div class="alert alert-error">Error: ${error.message}</div>`;
+        }
+    });
+    
+    function displayQuiz(quiz) {
+        quizContent.innerHTML = '';
+        
+        quiz.forEach((mcq, index) => {
+            const questionCard = document.createElement('div');
+            questionCard.className = 'question-card';
+            questionCard.innerHTML = `
+                <h3>Question ${index + 1}</h3>
+                <p class="question-text">${mcq.Question}</p>
+                <div class="options">
+                    <div class="option">A) ${mcq.A}</div>
+                    <div class="option">B) ${mcq.B}</div>
+                    <div class="option">C) ${mcq.C}</div>
+                    <div class="option">D) ${mcq.D}</div>
+                </div>
+                <div class="answer-section">
+                    <p><strong>Correct Answer:</strong> ${mcq.Correct_Answer}</p>
+                    ${mcq.Explanation ? `<p><strong>Explanation:</strong> ${mcq.Explanation}</p>` : ''}
+                </div>
+            `;
+            quizContent.appendChild(questionCard);
+        });
+        
+        quizResults.style.display = 'block';
+    }
+</script>
+{% endblock %}

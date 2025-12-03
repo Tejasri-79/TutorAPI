@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Ask Questions - AI Study Tutor{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>💬 Ask Questions</h1>
+    <p>Get instant answers from your study materials</p>
+</div>
+
+<div class="query-section">
+    <div class="chat-container">
+        <div id="chatHistory" class="chat-history">
+            <div class="chat-message assistant">
+                <strong>AI Tutor:</strong> Hello! I'm ready to answer your questions based on your study materials. What would you like to know?
+            </div>
+        </div>
+        
+        <form id="queryForm" class="query-form">
+            <textarea id="questionInput" placeholder="Type your question here..." rows="3" required></textarea>
+            <button type="submit" class="btn btn-primary">Ask Question</button>
+        </form>
+        
+        <div id="queryStatus" class="status-message"></div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const queryForm = document.getElementById('queryForm');
+    const questionInput = document.getElementById('questionInput');
+    const chatHistory = document.getElementById('chatHistory');
+    const queryStatus = document.getElementById('queryStatus');
+    
+    queryForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const question = questionInput.value.trim();
+        if (!question) return;
+        
+        // Add user message
+        addMessage(question, 'user');
+        questionInput.value = '';
+        
+        // Show loading
+        queryStatus.innerHTML = '<div class="loading">Thinking...</div>';
+        
+        try {
+            const formData = new FormData();
+            formData.append('question', question);
+            
+            const response = await fetch('/query', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            queryStatus.innerHTML = '';
+            
+            if (result.success) {
+                addMessage(result.answer, 'assistant');
+            } else {
+                addMessage(`Error: ${result.message}`, 'error');
+            }
+        } catch (error) {
+            queryStatus.innerHTML = '';
+            addMessage(`Error: ${error.message}`, 'error');
+        }
+    });
+    
+    function addMessage(text, type) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `chat-message ${type}`;
+        
+        if (type === 'user') {
+            messageDiv.innerHTML = `<strong>You:</strong> ${text}`;
+        } else if (type === 'assistant') {
+            messageDiv.innerHTML = `<strong>AI Tutor:</strong> ${text}`;
+        } else {
+            messageDiv.innerHTML = text;
+        }
+        
+        chatHistory.appendChild(messageDiv);
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+    }
+    
+    // Allow Enter to submit (Shift+Enter for new line)
+    questionInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            queryForm.dispatchEvent(new Event('submit'));
+        }
+    });
+</script>
+{% endblock %}
